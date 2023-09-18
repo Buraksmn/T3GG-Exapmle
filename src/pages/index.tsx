@@ -1,13 +1,44 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 
 import { api } from "@app/utils/api";
+import { useState } from "react";
+import Trpc from "./api/trpc/[trpc]";
 
 export default function Home() {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const { data } = api.tasks.getAllTasks.useQuery();
-  const addNewTaskMutation = api.tasks.addNewTasks.useMutation({});
+  const { mutate, isLoading, isSuccess } = api.tasks.addNewTasks.useMutation(
+    {},
+  );
+
+  const { mutate: removeMutation } = api.tasks.removeTask.useMutation();
+
+  const { data: sessionData, status, update } = useSession();
+  const trpc = api.useContext();
+  console.log("sessionData", status);
+
+  if (status === "unauthenticated") {
+  }
+  const handleAddTask = () => {
+    try {
+      mutate(
+        {
+          description: description,
+          title: title,
+        },
+        {
+          onSuccess: () => {
+            void trpc.tasks.getAllTasks.invalidate();
+          },
+        },
+      );
+    } catch (error) {}
+  };
 
   return (
     <>
@@ -26,6 +57,30 @@ export default function Home() {
             <div className="card-body items-center text-center">
               <h2 className="card-title">New Task!</h2>
 
+              {/* {status === "unauthenticated" && (
+                <button
+                  className=" btn btn-primary w-full"
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                  onClick={() => handleLogin()}
+                >
+                  {" "}
+                  Giriş Yap{" "}
+                </button>
+              )} */}
+
+              <button
+                className=" btn btn-primary w-full"
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                onClick={() =>
+                  removeMutation(undefined, {
+                    onSuccess: () => {
+                      void trpc.tasks.invalidate();
+                    },
+                  })
+                }
+              >
+                Tüm Taskları Sil
+              </button>
               <div className="card-actions justify-end">
                 <div className="form-control w-full">
                   <label className="label">
@@ -33,6 +88,7 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
+                    onChange={(e) => setTitle(e.target.value)}
                     placeholder="Task title"
                     className="input input-bordered w-full max-w-xs"
                   />
@@ -43,13 +99,15 @@ export default function Home() {
                     <span className="label-text">Description</span>
                   </label>
                   <textarea
+                    onChange={(e) => setDescription(e.target.value)}
                     className="textarea textarea-bordered h-24"
                     placeholder="Description "
                   />
                 </div>
               </div>
+
               <button
-                onClick={() => addNewTaskMutation.mutate()}
+                onClick={() => handleAddTask()}
                 className=" btn btn-primary w-full"
               >
                 Add New Task
@@ -57,10 +115,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex-col space-y-3">
+          <div className="w-full flex-col space-y-3">
             {data?.data.map((item, key) => {
               return (
-                <div key={"a"} className="rounded-md bg-white px-5 py-3">
+                <div key={"a"} className="w-auto rounded-md bg-white px-5 py-3">
                   <div className="flex items-center gap-3">
                     <div className="avatar">
                       <div className="w-10 rounded-xl">
@@ -70,28 +128,13 @@ export default function Home() {
                     <div className="">
                       <h4 className="font-semibold text-black">{item.task}</h4>
                       <p className="font-normal text-black">
-                        Description,Description,Description,Description{" "}
+                        {item.description}
                       </p>
                     </div>
                   </div>
                 </div>
               );
             })}
-            <div className="rounded-md bg-white px-5 py-3">
-              <div className="flex items-center gap-3">
-                <div className="avatar">
-                  <div className="w-10 rounded-xl">
-                    <img src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
-                  </div>
-                </div>
-                <div className="">
-                  <h4 className="font-semibold text-black">TASK</h4>
-                  <p className="font-normal text-black">
-                    Description,Description,Description,Description{" "}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>

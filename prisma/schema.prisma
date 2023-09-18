@@ -11,8 +11,9 @@ datasource db {
 }
 
 model Tasks {
-    id   Int    @id @default(autoincrement())
-    task String
+    id          Int    @id @default(autoincrement())
+    task        String
+    description String
 
     @@index([id])
 }
